@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: twitch-streamer
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: STREAM_KEY
+        value: YOUR_TWITCH_STREAM_KEY
