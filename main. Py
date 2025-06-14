@@ -1,0 +1,45 @@
+from flask import Flask, request, render_template_string
+import subprocess
+import os
+
+app = Flask(__name__)
+
+STREAM_KEY = os.environ.get("STREAM_KEY")  # Set this in Render env vars
+
+HTML_FORM = """
+    <h2>Start Twitch Stream</h2>
+    <form method="POST" action="/start">
+      <input type="text" name="url" placeholder="Video URL" style="width: 300px"/><br><br>
+      <button type="submit">Start Stream</button>
+    </form>
+"""
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template_string(HTML_FORM)
+
+@app.route("/start", methods=["POST"])
+def start_stream():
+    video_url = request.form.get("url")
+    if not video_url or not STREAM_KEY:
+        return "Missing video URL or stream key"
+
+    # ffmpeg streaming command
+    cmd = [
+        "ffmpeg", "-re", "-i", video_url,
+        "-c:v", "libx264", "-preset", "veryfast",
+        "-maxrate", "3000k", "-bufsize", "6000k",
+        "-pix_fmt", "yuv420p", "-g", "50",
+        "-c:a", "aac", "-b:a", "160k", "-ar", "44100",
+        "-f", "flv", f"rtmp://live.twitch.tv/app/{STREAM_KEY}"
+    ]
+
+    try:
+        subprocess.Popen(cmd)
+        return "Streaming started!"
+    except Exception as e:
+        print(e)
+        return "Failed to start stream."
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 3000)))
